@@ -3,3 +3,29 @@
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+<EditForm Model="_message" OnValidSubmit="async () => await ReceivedMessage()">
+    <InputTextArea @bind-Value="_message"></InputTextArea>
+    <button type="submit">Submit</button>
+</EditForm>
+
+@foreach (var msg in _messages)
+{
+    <p>@msg</p>
+}
+
+@code {
+
+    private string _message = "";
+    
+    private List<string> _messages = new List<string>();
+
+    private async Task ReceivedMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(_message))
+        {
+            _messages.Add(_message);
+        }
+    }
+
+}
