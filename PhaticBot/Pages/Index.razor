@@ -1,5 +1,6 @@
 ﻿@page "/"
-
+@using PhaticBot.Services
+@inject BotService Service
 <EditForm Model="_message" OnValidSubmit="ReceivedMessage">
     <div class="chat">
         <div class="chat-title">
@@ -39,7 +40,7 @@
         if (!string.IsNullOrWhiteSpace(_message))
         {
             _personalMessages.Add(_message);
-            _botsMessages.Add(_message);
+            _botsMessages.Add(Service.Receive(_message));
         }
 
         _message = "";
