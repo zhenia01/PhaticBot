@@ -22,7 +22,7 @@ namespace PhaticBot
         {
             services.AddRazorPages();
             services.AddServerSideBlazor();
-            services.AddSingleton<BotService>();
+            services.AddScoped<BotService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
