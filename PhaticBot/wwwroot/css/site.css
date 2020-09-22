@@ -173,7 +173,7 @@ body {
 .chat {
     margin: 0 auto;
     width: 60vw;
-    height: 85vh;
+    height: 75vh;
     max-height: 85vh;
     z-index: 2;
     overflow: hidden;
@@ -227,7 +227,7 @@ body {
 .messages {
     flex: 1 1 auto;
     color: rgba(255, 255, 255, .5);
-    overflow: hidden;
+    /*overflow: hidden;*/
     position: relative;
     width: 100%;
 }
@@ -235,9 +235,21 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    height: 101%;
+    overflow-y: scroll;
+    height: 100%;
     width: 100%;
+    padding-bottom: 1rem;
 }
+
+.messages-content::-webkit-scrollbar {
+    display: none;
+}
+
+.messages-content {
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+
 .messages .message {
     clear: both;
     float: left;
@@ -380,7 +392,7 @@ body {
     height: 30px;
     margin: 0;
     padding-right: 20px;
-    width: 90%;
+    width: 95%;
 }
 .message-box textarea:focus {
     color: transparent;
