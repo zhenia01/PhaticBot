@@ -1,6 +1,8 @@
 ﻿@page "/"
 @using PhaticBot.Services
 @inject BotService Service
+@inject IJSRuntime JsRuntime
+
 <EditForm Model="_message" OnValidSubmit="ReceivedMessage">
     <div class="chat">
         <div class="chat-title">
@@ -11,17 +13,18 @@
             </figure>
         </div>
         <div class="messages">
-            <div class="messages-content"></div>
-            @foreach ((string personal, string bots) in _personalMessages.Zip(_botsMessages))
-            {
-                <PersonalMessage Msg="@personal"></PersonalMessage>
-                <BotsMessage Msg="@bots"></BotsMessage>
-            }
-            
+            <div class="messages-content">
+                @foreach ((string personal, string bots) in _personalMessages.Zip(_botsMessages))
+                {
+                    <PersonalMessage Msg="@personal"></PersonalMessage>
+                    <BotsMessage Msg="@bots"></BotsMessage>
+                }
+                <div id="anchor"></div>
+            </div>
         </div>
         <div class="message-box">
             <InputText @bind-Value="_message" class="message-input" placeholder="Type message..."/>
-            <button type="submit" class="message-submit">Send</button>
+            @* <button type="submit" class="message-submit">Send</button> *@
         </div>
 
     </div>
@@ -44,6 +47,16 @@
         }
 
         _message = "";
+        ScrollToBottom();
+    }
+
+    public void ScrollToBottom()
+    {
+        Task.Run(async () =>
+        {
+            await InvokeAsync(StateHasChanged);
+            await JsRuntime.InvokeVoidAsync("scrollToBottom");
+        });
     }
 
 }
