@@ -50,13 +50,22 @@
         ScrollToBottom();
     }
 
-    public void ScrollToBottom()
+    private void ScrollToBottom()
     {
         Task.Run(async () =>
         {
+            _needReload = true;
             await InvokeAsync(StateHasChanged);
             await JsRuntime.InvokeVoidAsync("scrollToBottom");
+            _needReload = false;
         });
+    }
+
+    private bool _needReload;
+
+    protected override bool ShouldRender()
+    {
+        return _needReload;
     }
 
 }
