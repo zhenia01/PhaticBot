@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using OpenNLP.Tools.Chunker;
+using OpenNLP.Tools.PosTagger;
 using OpenNLP.Tools.Tokenize;
 
 namespace PhaticBot.Services
@@ -12,15 +16,16 @@ namespace PhaticBot.Services
         private static readonly Random Random = new Random();
 
         private static readonly List<string> Greeting = new List<string>
-            {
-                "hi" , "hey",  "hello" , "good morning", "welcome", "how do you do", "good evening", "good afternoon", 
-                "It's nice to meet you", "Good day mate", "Hey", "Hi", "Good to see you",
-            };
-        
+        {
+            "hi", "hey", "hello", "good morning", "welcome", "how do you do", "good evening", "good afternoon",
+            "It's nice to meet you", "Good day mate", "Hey", "Hi", "Good to see you",
+        };
+
         private static readonly List<string> Farewell = new List<string>
         {
-            "goodbye" , "bye", "see you"
+            "goodbye", "bye", "see you"
         };
+
         private static readonly List<string> Shy = new List<string>()
         {
             "Tell more about it", "Can you explain?", "Do not be shy, say more", "You are not talkative today",
@@ -39,7 +44,32 @@ namespace PhaticBot.Services
             "Oh, it's interesting, tell more about it", "i don't quite agree with you, argue your point",
             "Are you sure about this?"
         };
-        
+
+        private static readonly string ChunkModelPath =
+            Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "NLP-Models", "EnglishChunk.nbin");
+
+        private static readonly EnglishTreebankChunker Chunker = new EnglishTreebankChunker(ChunkModelPath);
+
+        private static readonly string PosModelPath =
+            Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "NLP-Models", "EnglishPOS.nbin");
+
+        private static readonly EnglishMaximumEntropyPosTagger PosTagger =
+            new EnglishMaximumEntropyPosTagger(PosModelPath);
+
+        public string ReceivePos(string msg)
+        {
+            var tokens = Tokenizer.Tokenize(msg);
+
+            return string.Join(" ", PosTagger.Tag(tokens));
+        }
+
+        public string[] ReceiveChunks(string msg)
+        {
+            var tokens = Tokenizer.Tokenize(msg);
+            var chunks = Chunker.GetChunks(tokens, PosTagger.Tag(tokens));
+
+            return chunks.Select(ch => $"{ch.Tag}: [{string.Join(" ", ch.TaggedWords.Select(tw => $"{tw.Word}({tw.Tag})"))}]").ToArray();
+        }
 
         public string Receive(string msg)
         {
@@ -59,7 +89,7 @@ namespace PhaticBot.Services
                 {
                     return Shy[Random.Next(Shy.Count)];
                 }
-                else if (tokens.Last() == "?" && WordCheck(tokens, "you" ) != "")
+                else if (tokens.Last() == "?" && WordCheck(tokens, "you") != "")
                 {
                     if (MsgCheck(tokens, Expression) != "")
                     {
@@ -83,6 +113,7 @@ namespace PhaticBot.Services
                     }
                 }
             }
+
             return $"I am not yet able to answer the question {msg}. Wait for updates:-)";
         }
 
@@ -95,9 +126,10 @@ namespace PhaticBot.Services
                     return token;
                 }
             }
+
             return "";
         }
-        
+
         private static string MsgCheck(string[] tokens, List<string> anyList)
         {
             foreach (var word in anyList)
@@ -110,6 +142,7 @@ namespace PhaticBot.Services
                     }
                 }
             }
+
             return "";
         }
     }

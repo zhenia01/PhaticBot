@@ -14,10 +14,13 @@
         </div>
         <div class="messages">
             <div class="messages-content">
-                @foreach ((string personal, string bots) in _personalMessages.Zip(_botsMessages))
+                @foreach ((string personal, string[] bots) in _personalMessages.Zip(_botsMessages))
                 {
                     <PersonalMessage Msg="@personal"></PersonalMessage>
-                    <BotsMessage Msg="@bots"></BotsMessage>
+                    @foreach (string bm in bots)
+                    {
+                        <BotsMessage Msg="@bm"></BotsMessage>
+                    }
                 }
                 <div id="anchor"></div>
             </div>
@@ -36,14 +39,14 @@
     private string _message = "";
 
     private readonly List<string> _personalMessages = new List<string>();
-    private readonly List<string> _botsMessages = new List<string>();
+    private readonly List<string[]> _botsMessages = new List<string[]>();
 
     private void ReceivedMessage()
     {
         if (!string.IsNullOrWhiteSpace(_message))
         {
             _personalMessages.Add(_message);
-            _botsMessages.Add(Service.Receive(_message));
+            _botsMessages.Add(Service.ReceiveChunks(_message));
         }
 
         _message = "";
