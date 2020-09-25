@@ -3,47 +3,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using OpenNLP.Tools;
 using OpenNLP.Tools.Chunker;
 using OpenNLP.Tools.PosTagger;
 using OpenNLP.Tools.Tokenize;
+using PhaticBot.Models;
 
 namespace PhaticBot.Services
 {
     public class BotService
     {
+        #region Fields
+
         private static readonly EnglishRuleBasedTokenizer Tokenizer = new EnglishRuleBasedTokenizer(false);
 
         private static readonly Random Random = new Random();
-
-        private static readonly List<string> Greeting = new List<string>
-        {
-            "hi", "hey", "hello", "good morning", "welcome", "how do you do", "good evening", "good afternoon",
-            "It's nice to meet you", "Good day mate", "Hey", "Hi", "Good to see you",
-        };
-
-        private static readonly List<string> Farewell = new List<string>
-        {
-            "goodbye", "bye", "see you"
-        };
-
-        private static readonly List<string> Shy = new List<string>()
-        {
-            "Tell more about it", "Can you explain?", "Do not be shy, say more", "You are not talkative today",
-            "Tell me more", "Say more"
-        };
-
-        private static readonly List<string> Expression = new List<string>()
-        {
-            "agree", "decide", "deserve", "expect", "hope", "learn", "need", "offer", "plan", "promise",
-            "seem", "wait", "want", "admit", "advise", "avoid", "consider", "deny", "involve", "mention",
-            "recommend", "like", "hate", "love", "know", "feel", "risk", "suggest"
-        };
-
-        private static readonly List<string> Asking = new List<string>()
-        {
-            "Oh, it's interesting, tell more about it", "i don't quite agree with you, argue your point",
-            "Are you sure about this?"
-        };
 
         private static readonly string ChunkModelPath =
             Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "NLP-Models", "EnglishChunk.nbin");
@@ -56,94 +30,93 @@ namespace PhaticBot.Services
         private static readonly EnglishMaximumEntropyPosTagger PosTagger =
             new EnglishMaximumEntropyPosTagger(PosModelPath);
 
-        public string ReceivePos(string msg)
+        private static readonly string[] Punct = {".", ",", "!", ":"};
+        
+        //0 - NP (apple), 1 - VP (is), 2 - ADJP (very tasty)
+        private static readonly List<string> AnswerAdjectives = new List<string>
         {
-            var tokens = Tokenizer.Tokenize(msg);
+            "Why {1} {0} {2} ?", "Mmm... couldn`t agree more. {1} {0} really {2} ?", "Are you sure that {0} {1} {2}?", 
+            "As for me, {0} {1} not {2}, are you sure?", "I can agree that {0} {1} {2}, can you argue?", 
+            "Why do you think that {0} {1} {2}", "Yes, {0} {1} {2}, can you tell more about it?",
+            "Ha-ha, yes, {0} {1} {2}, can you tell more about it?", "Can you argue that {0} {1} {2}?", 
+            "{0} {1} {2}, really?!", "{0} {1} not {2} as for me, are you joking?",
+            "Hmmm, {0} {1} {2}, {0} {1} {2}, do you think so?"
+        };
+        
+        //None
+        private static readonly List<string> AnswerNone = new List<string>
+        {
+            "Sorry, but this is exciting topic for me, can we change it?", 
+            "Sure, we can talk about it. But maybe better you will tell me how you spend your day?",
+            "Yes, we can speak about it. But maybe you will tell me why you do nothing and chat with me now?",
+            "Oh, came on. I haven't mood to talk about it, tell me what you plan to do tomorrow?",
+            "Okay,okay, I understand your interest in this topic, but can we speak about more attract topics?",
+            "You are fourth person who raises this topic today with me, can we change theme?", 
+            "Ha-ha, classic! Can you invent something else?",
+            "No, no, no! I don't want to hear this. Don't waste my time, next question?",
+            "I don't want to upset you, but this is boring. Can you tell something else?"
+        };
+        
+        private static readonly Dictionary<SentenceType, List<string>> Replies = 
+            new Dictionary<SentenceType, List<string>>
+        {
+            [SentenceType.NP_VP_ADJP] = AnswerAdjectives,
+            [SentenceType.None] = AnswerNone
+        };
+        
+        private static readonly Dictionary<SentenceType, List<string>> GroupNames = 
+            new Dictionary<SentenceType, List<string>>
+        {
+            [SentenceType.NP_VP_ADJP] = new List<string> {"NP", "VP", "ADJP"},
+            [SentenceType.None] = new List<string>()
+        };
+        
+        #endregion
 
-            return string.Join(" ", PosTagger.Tag(tokens));
+        private static string GetRandomReply(SentenceType type, IEnumerable<SentenceChunk> chunks)
+        {
+            chunks = chunks.Take(GroupNames[type].Count);
+
+            return string.Format(Replies[type][Random.Next(Replies[type].Count)],
+                chunks.Select(chunk => string.Join(" ", chunk.TaggedWords.Select(tw => tw.Word.ToLower()))).ToArray());
         }
 
-        public string[] ReceiveChunks(string msg)
+        private static SentenceType GetSentenceType(List<SentenceChunk> chunks)
         {
-            var tokens = Tokenizer.Tokenize(msg);
-            var chunks = Chunker.GetChunks(tokens, PosTagger.Tag(tokens));
-
-            return chunks.Select(ch => $"{ch.Tag}: [{string.Join(" ", ch.TaggedWords.Select(tw => $"{tw.Word}({tw.Tag})"))}]").ToArray();
-        }
-
-        public string Receive(string msg)
-        {
-            var tokens = Tokenizer.Tokenize(msg);
-
-            foreach (var token in tokens)
+            if (chunks.Count <= 2)
             {
-                if (Greeting.Contains(token))
+                return SentenceType.None;
+            }
+
+            foreach (var (type, names) in GroupNames)
+            {
+                if (chunks.Take(names.Count).Select(chunk => chunk.Tag).SequenceEqual(names))
                 {
-                    return Greeting[Random.Next(Greeting.Count)];
-                }
-                else if (Farewell.Contains(token))
-                {
-                    return Farewell[Random.Next(Farewell.Count)];
-                }
-                else if (tokens.Length <= 3)
-                {
-                    return Shy[Random.Next(Shy.Count)];
-                }
-                else if (tokens.Last() == "?" && WordCheck(tokens, "you") != "")
-                {
-                    if (MsgCheck(tokens, Expression) != "")
-                    {
-                        //return "Are you really interesting in it?";
-                        return "Why you ask about me? Let's speak about you";
-                    }
-                    else
-                    {
-                        return "I'm Ok, and you?";
-                    }
-                }
-                else if (tokens.Last() != "?")
-                {
-                    if (MsgCheck(tokens, Expression) != "")
-                    {
-                        return "Why do u love/hate too?";
-                    }
-                    else
-                    {
-                        return Asking[Random.Next(Asking.Count)];
-                    }
+                    return type;
                 }
             }
 
-            return $"I am not yet able to answer the question {msg}. Wait for updates:-)";
+            return SentenceType.None;
+        }
+        
+        private static string Reply(List<SentenceChunk> chunks)
+        {
+            return GetRandomReply(GetSentenceType(chunks), chunks);
         }
 
-        private static string WordCheck(IEnumerable<string> tokens, string word)
+        private static List<SentenceChunk> GetChunks(string msg)
         {
-            foreach (var token in tokens)
-            {
-                if (token == word)
-                {
-                    return token;
-                }
-            }
-
-            return "";
+            var tokens = Tokenizer.Tokenize(msg)
+                .Where(token => !Punct.Contains(token)).ToArray();
+  
+            return Chunker.GetChunks(tokens, PosTagger.Tag(tokens));
         }
 
-        private static string MsgCheck(string[] tokens, List<string> anyList)
+        public static string Receive(string msg)
         {
-            foreach (var word in anyList)
-            {
-                foreach (var token in tokens)
-                {
-                    if (token == word)
-                    {
-                        return token;
-                    }
-                }
-            }
+            var chunks = GetChunks(msg);
 
-            return "";
+            return Reply(chunks);
         }
     }
 }
