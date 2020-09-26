@@ -10,7 +10,9 @@ namespace PhaticBot.Models
         Small,
         PP_NP,
         VP_NP,
+        NP,
+        VP,
+        ADJP,
         None
-        
     }
 }
