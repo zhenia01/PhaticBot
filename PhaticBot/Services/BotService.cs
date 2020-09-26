@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using OpenNLP.Tools;
 using OpenNLP.Tools.Chunker;
+using OpenNLP.Tools.Ling;
 using OpenNLP.Tools.PosTagger;
 using OpenNLP.Tools.Tokenize;
 using PhaticBot.Models;
@@ -31,9 +32,26 @@ namespace PhaticBot.Services
 
         private static readonly EnglishMaximumEntropyPosTagger PosTagger =
             new EnglishMaximumEntropyPosTagger(PosModelPath);
-
+        
         private static readonly string[] Punct = {".", ",", "!", ":"};
 
+        private static readonly List<string> AnswerGreeting = new List<string>
+        {
+            "Hello! How do you do? ☺️", "Oh, nice to meet you! How are you? 😊", "Hey, bro! Wassup? 😎",
+            "Hi, tell something about you 😊"
+        };
+        
+        private static readonly List<string> AnswerFarewell = new List<string>
+        {
+            "See you 😊️", "Goodbye, see you soon 🙃", "Bye, bye!"
+        };
+        
+        private static readonly List<string> AnswerUnknownADVP = new List<string>
+        {
+            "🤪 {0}, {0}, everyone ask {0}. Ask something else!", "Don't ask {0}, if you don't know half of answer ☝️",
+            "Everyone ask me {0}, but I'll not say it 😷", "Ha-ha, you ask {0}, it's a secret 👽", 
+            "Ask {0} to yourself ☝️🐺",
+        };
         //0 - NP (apple), 1 - VP (is), 2 - ADJP (very tasty)
         private static readonly List<string> AnswerAdjectives = new List<string>
         {
@@ -91,23 +109,25 @@ namespace PhaticBot.Services
                 [SentenceType.NP_VP_ADJP] = AnswerAdjectives,
                 [SentenceType.None] = AnswerNone,
                 [SentenceType.Small] = AnswerSmall,
+                [SentenceType.Greeting] = AnswerGreeting,
+                [SentenceType.Farewell] = AnswerFarewell,
+                [SentenceType.UnknownADVP] = AnswerUnknownADVP,
                 [SentenceType.PP_NP] = Asking,
                 [SentenceType.VP_NP] = Asking
             };
 
         private static readonly Dictionary<SentenceType, List<string>> GroupNames =
             new Dictionary<SentenceType, List<string>>
-            {
-                [SentenceType.NP_VP_ADJP] = new List<string> {"NP", "VP", "ADJP"},
-                [SentenceType.PP_NP] = new List<string> {"PP", "NP"},
-                [SentenceType.VP_NP] = new List<string> {"VP", "NP"},
-                [SentenceType.NP] = new List<string> {"NP"},
-                [SentenceType.VP] = new List<string> {"VP"},
-                [SentenceType.ADJP] = new List<string> {"ADJP"},
-                [SentenceType.None] = new List<string>(),
-                [SentenceType.Small] = new List<string>(),
-            };
-
+        {
+            [SentenceType.NP_VP_ADJP] = new List<string> {"NP", "VP", "ADJP"},
+            [SentenceType.UnknownADVP] = new List<string> {"ADVP"},
+            [SentenceType.None] = new List<string>(),
+            [SentenceType.Small] = new List<string>(),
+            [SentenceType.Greeting] = new List<string>(),
+            [SentenceType.Farewell] = new List<string>()
+            
+        };
+        
         #endregion
 
         private static string GetRandomReply(SentenceType type, IEnumerable<SentenceChunk> chunks, int toSkip = 0)
@@ -129,6 +149,16 @@ namespace PhaticBot.Services
 
         private static (SentenceType type, int toSkip) GetSentenceType(List<SentenceChunk> chunks)
         {
+            if (isGreeting(chunks))
+            {
+                return (SentenceType.Greeting, 0);
+            }
+            
+            if (isFarewell(chunks))
+            {
+                return (SentenceType.Farewell, 0);
+            }
+            
             if (chunks.Count <= 2)
             {
                 return (SentenceType.Small, 0);
@@ -180,6 +210,60 @@ namespace PhaticBot.Services
             return Chunker.GetChunks(tokens, PosTagger.Tag(tokens));
         }
 
+        public static SentenceChunk ChangePronounYouI (SentenceChunk chunk)
+        {
+            foreach (var tw in chunk.TaggedWords)
+            {
+                tw.Word = tw.Word switch
+                {
+                    "I" => "you",
+                    "you" => "I",
+                    "You" => "I",
+                    _ => null
+                } ?? tw.Word;
+            }
+            return chunk;
+        }
+
+        public static bool isGreeting(List<SentenceChunk> chunks)
+        {
+            List<string> greetings = new List<string>()
+            {
+                "hi", "hello", "hey", "yo"
+            };
+            foreach (var chunk in chunks)
+            {
+                foreach (var word in chunk.TaggedWords.Select(tw => tw.Word))
+                {
+                    foreach (var greeting in greetings)
+                    {
+                        if (word.ToLower() == greeting) return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        public static bool isFarewell(List<SentenceChunk> chunks)
+        {
+            List<string> farewells = new List<string>()
+            {
+                "bye", "goodbye", "goodnight" 
+            };
+            foreach (var chunk in chunks)
+            {
+                foreach (var word in chunk.TaggedWords.Select(tw => tw.Word))
+                {
+                    foreach (var farewell in farewells)
+                    {
+                        if (word.ToLower() == farewell) return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        
         public static string Receive(string msg)
         {
             var chunks = GetChunks(msg);
