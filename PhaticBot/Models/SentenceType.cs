@@ -7,6 +7,8 @@ namespace PhaticBot.Models
     public enum SentenceType
     {
         NP_VP_ADJP,
+        Small,
         None
+        
     }
 }
