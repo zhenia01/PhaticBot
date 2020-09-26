@@ -16,6 +16,6 @@ namespace PhaticBot.Models
         None,
         Greeting,
         Farewell,
-        UnknownADVP
+        ADVP
     }
 }
