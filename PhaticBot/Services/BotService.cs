@@ -64,12 +64,25 @@ namespace PhaticBot.Services
             "I don't want to upset you, but this is boring. 🤦‍♂️ Can you tell something else? "
         };
         
+        // 0 - PP or VP (like, help), 1 - NP (me, beer, pizza)
+        private static readonly List<string> Asking = new List<string>()
+        {
+            "Sure, I {0} {1}, what about you?",
+            "Ohh, I wonder if you think I {0} {1}",
+            "It doesn't matter if I {0} {1}, quantum physics is important",
+            "Let's go drink beer than talk about whether I {0} {1}",
+            "Do you really need to know if I {0} {1}",
+            "I'm ashamed to say it, but I don't {0} {1}"
+        };
+        
         private static readonly Dictionary<SentenceType, List<string>> Replies = 
             new Dictionary<SentenceType, List<string>>
         {
             [SentenceType.NP_VP_ADJP] = AnswerAdjectives,
             [SentenceType.None] = AnswerNone,
-            [SentenceType.Small] = AnswerSmall
+            [SentenceType.Small] = AnswerSmall,
+            [SentenceType.PP_NP] = Asking,
+            [SentenceType.VP_NP] = Asking
         };
         
         private static readonly Dictionary<SentenceType, List<string>> GroupNames = 
@@ -77,9 +90,9 @@ namespace PhaticBot.Services
         {
             [SentenceType.NP_VP_ADJP] = new List<string> {"NP", "VP", "ADJP"},
             [SentenceType.None] = new List<string>(),
-            [SentenceType.Small] = new List<string>()
-            
-            
+            [SentenceType.Small] = new List<string>(),
+            [SentenceType.PP_NP] = new List<string>() {"PP", "NP"},
+            [SentenceType.PP_NP] = new List<string>() {"VP", "NP"},
         };
         
         #endregion
@@ -101,9 +114,12 @@ namespace PhaticBot.Services
 
             foreach (var (type, names) in GroupNames)
             {
-                if (chunks.Take(names.Count).Select(chunk => chunk.Tag).SequenceEqual(names))
+                for (int i = 0; i < chunks.Count; i++)
                 {
-                    return type;
+                    if (chunks.Skip(i).Take(names.Count).Select(chunk => chunk.Tag).SequenceEqual(names))
+                    {
+                        return type;
+                    }
                 }
             }
 

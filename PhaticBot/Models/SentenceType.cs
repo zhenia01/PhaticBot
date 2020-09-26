@@ -8,6 +8,8 @@ namespace PhaticBot.Models
     {
         NP_VP_ADJP,
         Small,
+        PP_NP,
+        VP_NP,
         None
         
     }
