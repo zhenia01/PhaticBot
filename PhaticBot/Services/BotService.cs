@@ -90,6 +90,7 @@ namespace PhaticBot.Services
             [SentenceType.None] = AnswerNone,
             [SentenceType.Small] = AnswerSmall,
             [SentenceType.Greeting] = AnswerGreeting,
+            [SentenceType.Farewell] = AnswerFarewell,
             [SentenceType.UnknownADVP] = AnswerUnknownADVP
         };
         
