@@ -8,7 +8,9 @@ namespace PhaticBot.Models
     {
         NP_VP_ADJP,
         Small,
-        None
+        None,
+        Greeting,
+        Farewell
         
     }
 }

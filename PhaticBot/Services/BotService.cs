@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using OpenNLP.Tools;
 using OpenNLP.Tools.Chunker;
+using OpenNLP.Tools.Ling;
 using OpenNLP.Tools.PosTagger;
 using OpenNLP.Tools.Tokenize;
 using PhaticBot.Models;
@@ -29,9 +30,20 @@ namespace PhaticBot.Services
 
         private static readonly EnglishMaximumEntropyPosTagger PosTagger =
             new EnglishMaximumEntropyPosTagger(PosModelPath);
-
+    
+      
         private static readonly string[] Punct = {".", ",", "!", ":"};
         
+        private static readonly List<string> AnswerGreeting = new List<string>
+        {
+            "Hello! How do you do? ☺️", "Oh, nice to meet you! How are you? 😊", "Hey, bro! Wassup? 😎",
+            "Hi, tell something about you 😊"
+        };
+        
+        private static readonly List<string> AnswerFarewell = new List<string>
+        {
+            "See you 😊️", "Goodbye, see you soon 🙃", "Bye, bye!"
+        };
         //0 - NP (apple), 1 - VP (is), 2 - ADJP (very tasty)
         private static readonly List<string> AnswerAdjectives = new List<string>
         {
@@ -69,7 +81,9 @@ namespace PhaticBot.Services
         {
             [SentenceType.NP_VP_ADJP] = AnswerAdjectives,
             [SentenceType.None] = AnswerNone,
-            [SentenceType.Small] = AnswerSmall
+            [SentenceType.Small] = AnswerSmall,
+            [SentenceType.Greeting] = AnswerGreeting,
+            [SentenceType.Farewell] = AnswerFarewell
         };
         
         private static readonly Dictionary<SentenceType, List<string>> GroupNames = 
@@ -77,9 +91,9 @@ namespace PhaticBot.Services
         {
             [SentenceType.NP_VP_ADJP] = new List<string> {"NP", "VP", "ADJP"},
             [SentenceType.None] = new List<string>(),
-            [SentenceType.Small] = new List<string>()
-            
-            
+            [SentenceType.Small] = new List<string>(),
+            [SentenceType.Greeting] = new List<string>(),
+            [SentenceType.Farewell] = new List<string>()
         };
         
         #endregion
@@ -94,6 +108,16 @@ namespace PhaticBot.Services
 
         private static SentenceType GetSentenceType(List<SentenceChunk> chunks)
         {
+            if (isGreeting(chunks))
+            {
+                return SentenceType.Greeting;
+            }
+            
+            if (isFarewell(chunks))
+            {
+                return SentenceType.Farewell;
+            }
+            
             if (chunks.Count <= 2)
             {
                 return SentenceType.Small;
@@ -123,6 +147,60 @@ namespace PhaticBot.Services
             return Chunker.GetChunks(tokens, PosTagger.Tag(tokens));
         }
 
+        public static SentenceChunk ChangePronounYouI (SentenceChunk chunk)
+        {
+            foreach (var tw in chunk.TaggedWords)
+            {
+                tw.Word = tw.Word switch
+                {
+                    "I" => "you",
+                    "you" => "I",
+                    "You" => "I",
+                    _ => null
+                } ?? tw.Word;
+            }
+            return chunk;
+        }
+
+        public static bool isGreeting(List<SentenceChunk> chunks)
+        {
+            List<string> greetings = new List<string>()
+            {
+                "hi", "hello", "hey", "yo"
+            };
+            foreach (var chunk in chunks)
+            {
+                foreach (var word in chunk.TaggedWords.Select(tw => tw.Word))
+                {
+                    foreach (var greeting in greetings)
+                    {
+                        if (word.ToLower() == greeting) return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        public static bool isFarewell(List<SentenceChunk> chunks)
+        {
+            List<string> farewells = new List<string>()
+            {
+                "bye", "goodbye", "goodnight" 
+            };
+            foreach (var chunk in chunks)
+            {
+                foreach (var word in chunk.TaggedWords.Select(tw => tw.Word))
+                {
+                    foreach (var farewell in farewells)
+                    {
+                        if (word.ToLower() == farewell) return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
+        
         public static string Receive(string msg)
         {
             var chunks = GetChunks(msg);
