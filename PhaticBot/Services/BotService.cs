@@ -44,6 +44,13 @@ namespace PhaticBot.Services
         {
             "See you 😊️", "Goodbye, see you soon 🙃", "Bye, bye!"
         };
+        
+        private static readonly List<string> AnswerUnknownADVP = new List<string>
+        {
+            "🤪 {0}, {0}, everyone ask {0}. Ask something else!", "Don't ask {0}, if you don't know half of answer ☝️",
+            "Everyone ask me {0}, but I'll not say it 😷", "Ha-ha, you ask {0}, it's a secret 👽", 
+            "Ask {0} to yourself ☝️🐺",
+        };
         //0 - NP (apple), 1 - VP (is), 2 - ADJP (very tasty)
         private static readonly List<string> AnswerAdjectives = new List<string>
         {
@@ -83,17 +90,19 @@ namespace PhaticBot.Services
             [SentenceType.None] = AnswerNone,
             [SentenceType.Small] = AnswerSmall,
             [SentenceType.Greeting] = AnswerGreeting,
-            [SentenceType.Farewell] = AnswerFarewell
+            [SentenceType.UnknownADVP] = AnswerUnknownADVP
         };
         
         private static readonly Dictionary<SentenceType, List<string>> GroupNames = 
             new Dictionary<SentenceType, List<string>>
         {
             [SentenceType.NP_VP_ADJP] = new List<string> {"NP", "VP", "ADJP"},
+            [SentenceType.UnknownADVP] = new List<string> {"ADVP"},
             [SentenceType.None] = new List<string>(),
             [SentenceType.Small] = new List<string>(),
             [SentenceType.Greeting] = new List<string>(),
             [SentenceType.Farewell] = new List<string>()
+            
         };
         
         #endregion

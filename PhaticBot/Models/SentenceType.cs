@@ -10,7 +10,8 @@ namespace PhaticBot.Models
         Small,
         None,
         Greeting,
-        Farewell
+        Farewell,
+        UnknownADVP
         
     }
 }
