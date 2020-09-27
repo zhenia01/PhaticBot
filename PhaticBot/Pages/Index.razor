@@ -43,20 +43,29 @@
         if (!string.IsNullOrWhiteSpace(_message))
         {
             _personalMessages.Add(_message);
-            _botsMessages.Add(Service.Receive(_message));
+            _botsMessages.Add(BotService.Receive(_message));
         }
 
         _message = "";
         ScrollToBottom();
     }
 
-    public void ScrollToBottom()
+    private void ScrollToBottom()
     {
         Task.Run(async () =>
         {
+            _needReload = true;
             await InvokeAsync(StateHasChanged);
             await JsRuntime.InvokeVoidAsync("scrollToBottom");
+            _needReload = false;
         });
+    }
+
+    private bool _needReload;
+
+    protected override bool ShouldRender()
+    {
+        return _needReload;
     }
 
 }
